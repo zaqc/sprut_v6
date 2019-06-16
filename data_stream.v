@@ -25,7 +25,11 @@ module data_stream(
 
 	data_buf data_buf_unit(
 		.clock(clk),
-		.data()
+		.data(),
+		.rdaddress(),
+		.wraddress(),
+		.wren(),
+		.q()
 	);
 	
 	reg			[0:0]			prev_sync;
@@ -37,8 +41,13 @@ module data_stream(
 	reg			[7:0]			r_step;
 	
 	reg			[0:0]			buf_half;
+	always @ (posedge clk or negedge rst_n)
+		if(~rst_n)
+			buf_half <= 1'b0;
+		else
+			buf_half <= ((i_l_valid & buf_half) | (i_r_valid & ~buf_half)) ? ~buf_half : buf_half;
 	
-	wire		[15:0]			data_length
+	wire		[15:0]			data_length;
 	assign data_length = 
 		ch_cntr[0]  + ch_cntr[1]  + ch_cntr[2]  + ch_cntr[3]  + ch_cntr[4]  + ch_cntr[5]  + ch_cntr[6]  + ch_cntr[7]  +
 		ch_cntr[8]  + ch_cntr[9]  + ch_cntr[10] + ch_cntr[11] + ch_cntr[12] + ch_cntr[13] + ch_cntr[14] + ch_cntr[15] +
@@ -58,7 +67,7 @@ module data_stream(
 	assign mem_wr_addr = (buf_half == 1'b0 ? 15'd0 : 15'd4096) + ch ;
 	
 	wire						data_valid;
-	assign mem_wr = ~&{ch_cntr[ch][5:0]} ? data_vld;
+	assign mem_wr = ~&{ch_cntr[ch][5:0]} ? data_vld : 1'b0;
 		
 		
 	wire						wr_rdy;
