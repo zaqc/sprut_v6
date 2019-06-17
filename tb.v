@@ -91,32 +91,95 @@ module tb();
 		rd_dly <= rd_addr[0];
 	
 	assign rd_data = def_wr_n == 1'b0 ? 32'hZZZZZZZZ : (rd_addr[0] ? data : data_len);
+			
+	reg			[7:0]		ch_data_l;
+	reg			[3:0]		ch_number_l;
+	reg			[31:0]		master_frame_l;
+	reg			[0:0]		complite_l;
 	
-	wire		[7:0]			ch_addr;
-	wire		[31:0]			ch_data;
-	wire						ch_wr_n;
+	reg			[7:0]		ch_data_r;
+	reg			[3:0]		ch_number_r;
+	reg			[31:0]		master_frame_r;
+	reg			[0:0]		complite_r;
 	
-	reg			[7:0]			sch;
-	initial begin
-		sch <= 8'd10;
-		#10000
-		#10000
-		#10000
-		#10000
-		sch <= 8'd12;
-		#10000
-		sch <= 8'd11;
-		#10000
-		#10000
-		sch <= 8'd1;
-		#10000
-		sch <= 8'd12;
-	end
-
+	wire					rdy_l;
+	wire					rdy_r;
+	
+	always @ (posedge clk or negedge rst_n)
+		if(~rst_n) begin
+			ch_data_l <= 8'd0;
+			ch_number_l <= 4'd0;
+			master_frame_l <= 32'd0;
+			complite_l <= 1'b0;
+		end
+		else begin
+			if(sync_pulse) begin
+				ch_data_l <= 8'd0;
+				ch_number_l <= 4'd0;
+				master_frame_l <= 32'd0;
+				complite_l <= 1'b0;
+			end 
+			else begin
+				if(rdy_l) begin
+					if(~&{ch_data_l[4:0]})
+						ch_data_l <= ch_data_l + 4'd1;
+					else begin
+						if(~&{ch_number_l}) begin
+							ch_data_l <= 8'd0;
+							ch_number_l <= ch_number_l + 4'd1;
+						end
+						else
+							complite_l <= 1'b1;
+					end
+				end
+			end
+		end
+		
+	always @ (posedge clk or negedge rst_n)
+		if(~rst_n) begin
+			ch_data_r <= 8'd0;
+			ch_number_r <= 4'd0;
+			master_frame_r <= 32'd0;
+			complite_r <= 1'b0;
+		end
+		else begin
+			if(sync_pulse) begin
+				ch_data_r <= 8'd0;
+				ch_number_r <= 4'd0;
+				master_frame_r <= 32'd0;
+				complite_r <= 1'b0;
+			end 
+			else begin
+				if(rdy_r) begin
+					if(~&{ch_data_r[4:0]})
+						ch_data_r <= ch_data_r + 4'd1;
+					else begin
+						if(~&{ch_number_r}) begin
+							ch_data_r <= 8'd0;
+							ch_number_r <= ch_number_r + 4'd1;
+						end
+						else
+							complite_r <= 1'b1;
+					end
+				end
+			end
+		end
+		
+		
 	data_stream data_stream_unit(
 		.rst_n(rst_n),
 		.clk(clk),
 		
+		.i_l_data({ ch_number_l, 24'd0, ch_data_l}),
+		.i_l_valid(~complite_l),
+		.o_l_ready(rdy_l),
+		
+		.i_r_data({ ch_number_r, 24'hFFFFFF, ch_data_r}),
+		.i_r_valid(~complite_r),
+		.o_r_ready(rdy_r),
+		
+		.o_sync_pulse(sync_pulse),
+				
 		.i_sync(sync)
 	);
 	

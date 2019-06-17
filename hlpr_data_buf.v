@@ -3,8 +3,8 @@
 module data_buf(
 	input							clock,
 	input			[31:0]			data,
-	input			[12:0]			rdaddress,
-	input			[12:0]			wraddress,
+	input			[15:0]			rdaddress,
+	input			[15:0]			wraddress,
 	input							wren,
 	output			[31:0]			q
 );

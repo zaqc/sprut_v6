@@ -14,6 +14,8 @@ module data_stream(
 	
 	input							i_sync,
 	
+	output							o_sync_pulse,
+	
 	output			[15:0]			o_out_data_len,
 	
 	output			[31:0]			o_out_data,
@@ -22,14 +24,39 @@ module data_stream(
 );
 
 	assign o_out_data_len = out_data_len;
+	
+	wire			[31:0]			wr_data;
+	wire			[15:0]			wr_addr;
+	wire							wr_en;
+	
+	wire							i_valid;
+	assign i_valid = buf_half == 1'b0 ? i_l_valid : i_r_valid;
+	
+	wire			[35:0]			i_data;
+	assign i_data = buf_half == 1'b0 ? i_l_data : i_r_data;
+	
+	
+	
+	assign wr_en = ~ch_cntr[ch_number][7] & i_valid;
+	assign wr_data = i_data[31:0];
+	wire			[4:0]			ch_number;
+	assign ch_number = {buf_half, i_data[35:32]};
+	assign wr_addr = {ch_number, ch_cntr[ch_number][6:0]};
+	
+	assign o_l_ready = ~buf_half;
+	assign o_r_ready = buf_half;
+	
+	wire			[31:0]			rd_data;
+	wire			[15:0]			rd_addr;
 
 	data_buf data_buf_unit(
 		.clock(clk),
-		.data(),
-		.rdaddress(),
-		.wraddress(),
-		.wren(),
-		.q()
+		.data(wr_data),
+		.wraddress(wr_addr),
+		.wren(wr_en),
+		
+		.rdaddress(rd_addr),
+		.q(rd_data)
 	);
 	
 	reg			[0:0]			prev_sync;
@@ -37,6 +64,8 @@ module data_stream(
 	
 	wire						sync_pulse;
 	assign sync_pulse = ~prev_sync & i_sync ? 1'b1 : 1'b0;
+	
+	assign o_sync_pulse = sync_pulse;
 	
 	reg			[7:0]			r_step;
 	
@@ -66,7 +95,7 @@ module data_stream(
 	wire		[15:0]			mem_wr_addr;
 	assign mem_wr_addr = (buf_half == 1'b0 ? 15'd0 : 15'd4096) + ch ;
 	
-	wire						data_valid;
+	wire						mem_wr;
 	assign mem_wr = ~&{ch_cntr[ch][5:0]} ? data_vld : 1'b0;
 		
 		
@@ -82,16 +111,13 @@ module data_stream(
 	reg			[7:0]			ch_cntr[0:31];
 	reg			[7:0]			ch_mask[0:31];
 	reg			[15:0]			out_data_len;
-	reg			[7:0]			ch_num;
 	reg			[7:0]			wd_num;
 	integer i;
 	
 	always @ (posedge clk or negedge rst_n)
 		if(~rst_n) begin
 			r_step <= 8'd0;
-			buf_half <= 1'b0;
 			out_data_len <= 16'd0;
-			ch_num <= 8'd0;
 			wd_num <= 8'd0;
 			for(i = 0; i < 32; i = i + 1) begin
 				ch_cntr[i] <= 8'd0;
@@ -102,24 +128,21 @@ module data_stream(
 			if(sync_pulse) begin
 				r_step <= 8'd1;
 				out_data_len <= data_length;
-				ch_num <= 8'd0;
 				wd_num <= 8'd0;
 				for(i = 0; i < 32; i = i + 1) begin
 					ch_mask[i] <= ch_cntr[i];
 					ch_cntr[i] <= 8'd0;
 				end
 			end
-			else begin				
+			else begin
 				if(r_step == 8'd1) begin
-				end
-				else begin
+					if(~&{ch_cntr[ch_number][6:0]})
+						ch_cntr[ch_number] <= ch_cntr[ch_number] + 8'd1;
 				end
 			end
 		end
 		
-	always @ (posedge clk or negedge rst_n)
-		if(~rst_n) begin
-		end
+	
 
 endmodule
 
