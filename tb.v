@@ -165,6 +165,14 @@ module tb();
 			end
 		end
 		
+	reg			[0:0]			out_rdy;
+	initial begin
+		out_rdy <= 1'b1;
+		#2195
+		out_rdy <= 1'b0;
+		#100
+		out_rdy <= 1'b1;
+	end
 		
 	data_stream data_stream_unit(
 		.rst_n(rst_n),
@@ -179,6 +187,8 @@ module tb();
 		.o_r_ready(rdy_r),
 		
 		.o_sync_pulse(sync_pulse),
+		
+		.i_out_ready(out_rdy),
 				
 		.i_sync(sync)
 	);

@@ -75,7 +75,7 @@ module data_stream(
 			buf_half <= ((i_l_valid & buf_half) | (i_r_valid & ~buf_half)) ? ~buf_half : buf_half;
 	
 	wire		[15:0]			data_length;
-	assign data_length = 
+	assign data_length = 16'd8 +
 		ch_cntr[0]  + ch_cntr[1]  + ch_cntr[2]  + ch_cntr[3]  + ch_cntr[4]  + ch_cntr[5]  + ch_cntr[6]  + ch_cntr[7]  +
 		ch_cntr[8]  + ch_cntr[9]  + ch_cntr[10] + ch_cntr[11] + ch_cntr[12] + ch_cntr[13] + ch_cntr[14] + ch_cntr[15] +
 		ch_cntr[16] + ch_cntr[17] + ch_cntr[18] + ch_cntr[19] + ch_cntr[20] + ch_cntr[21] + ch_cntr[22] + ch_cntr[23] +
@@ -108,7 +108,7 @@ module data_stream(
 						ch_cntr[ch_number] <= ch_cntr[ch_number] + 8'd1;
 		end
 		
-	assign o_out_data = 
+	assign o_out_data =
 		rd_step == 4'd0 ? {ch_mask[0],  ch_mask[1],  ch_mask[2],  ch_mask[3]}  :
 		rd_step == 4'd1 ? {ch_mask[4],  ch_mask[5],  ch_mask[6],  ch_mask[7]}  :
 		rd_step == 4'd2 ? {ch_mask[8],  ch_mask[9],  ch_mask[10], ch_mask[11]} :
@@ -129,6 +129,8 @@ module data_stream(
 		else begin
 			mem_ws <= {mem_ws[0], 1'b1};
 		end
+		
+	assign rd_addr = {4'd0, out_ch, out_wn[6:0]};
 		
 	reg			[4:0]			out_ch;
 	reg			[7:0]			out_wn;
